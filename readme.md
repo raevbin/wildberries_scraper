@@ -8,10 +8,12 @@
 1. Должен быть установлен docker
 2. Загрузить репозиторий в папку wondersell_scraper
 3. Отредактировать файл wondersell_scraper/proxy_list.csv , добавив туда несколько прокси серверов. Например:
->protocol;ip;port;login;passoword
->socks;83.217.11.126;2324;sdfgdsfg;asdfhjkasl
->socks;185.58.204.145;4555;sdfert;dfghwr
->socks;185.211.246.79;4664;sdfgs;andfgdhsrew
+```
+protocol;ip;port;login;passoword
+socks;83.217.11.126;2324;sdfgdsfg;asdfhjkasl
+socks;185.58.204.145;4555;sdfert;dfghwr
+socks;185.211.246.79;4664;sdfgs;andfgdhsrew
+```
 
 4. Установка:
 
@@ -38,6 +40,11 @@ root@f96349b4e0d9:/data#
 ```sh
 # scrapy crawl proxy_test
 ```
+! при первом запуске после создания контейнера могут появиться ошибки:
+(Error occurred during fetching http://useragentstring.com/pages/useragentstring.php?name=Chrome
+...
+socket.timeout: timed out)
+но при этом все должно работать штатно и при повторе такого быть не должно.
 в результат увидим количество рабочих прокси
 (по умолчанию программа выбирает только протокол socks!)
 Более подробно о параметрах сканеров - в разделе "Параметры"

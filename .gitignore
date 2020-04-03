@@ -12,3 +12,4 @@ twistd.pid
 ~*
 crawls
 dbs
+proxy_list.csv
