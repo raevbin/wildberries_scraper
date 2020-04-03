@@ -2,6 +2,8 @@ logs/*
 !logs/.gitkeep
 scylla_db/*
 !scylla_db/.gitkeep
+mysql_db/*
+!mysql_db/.gitkeep
 sql_db/*
 !sql_db/.gitkeep
 wildsearch_crawler/__pycache__/

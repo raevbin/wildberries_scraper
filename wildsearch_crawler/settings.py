@@ -12,7 +12,8 @@ ROOTPATH = PROJECTPATH.parent
 
 DOWNLOAD_TIMEAUT = None
 
-DB_ENGINE = f'sqlite:///{ROOTPATH}/sql_db/wildsearch.db'
+# DB_ENGINE = f'sqlite:///{ROOTPATH}/sql_db/wildsearch.db'
+DB_ENGINE = 'mysql+mysqldb://root:root@db:3306/wildsearch?charset=utf8'
 
 SPLASH_URL = 'http://splash:8050'
 SCYLLA_URL = 'http://scylla:8899/api/v1/proxies'

@@ -23,3 +23,18 @@ services:
   #     - 8081:8081
   #   volumes:
   #     - ./scylla_db/:/var/www/scylla/
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wildsearch
+    ports:
+     - '3307:3306'
+    expose:
+     - '3307'
+    command: --init-file /data/init_mysql/init.sql
+    volumes:
+      - ./mysql_db:/var/lib/mysql
+      - ./init_mysql/mycustom.cnf:/etc/mysql/conf.d/custom.cnf
+      - ./init_mysql/init.sql:/data/init_mysql/init.sql

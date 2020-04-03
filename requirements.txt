@@ -9,3 +9,5 @@ fake-useragent
 sqlalchemy
 scrapy-splash
 sqlalchemy-migrate
+pymysql
+mysqlclient

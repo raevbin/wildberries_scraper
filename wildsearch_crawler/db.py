@@ -108,12 +108,12 @@ class ReviewModel(Base):
 
 
 class OptionModel(Base):
-    __tablename__ = 'option'
+    __tablename__ = 'opt'
     id = Column(Integer, primary_key=True)
     item_id = Column(Integer, ForeignKey('item.id'))
     date_add = Column(DateTime)
     wb_option_id = Column(Integer)
-    name = Column(String(10))
+    name = Column(String(30))
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -129,7 +129,7 @@ class QuantityModel(Base):
     __tablename__ = 'quantity'
 
     id = Column(Integer, primary_key=True)
-    option_id = Column(Integer, ForeignKey('option.id'))
+    option_id = Column(Integer, ForeignKey('opt.id'))
     id_date = Column(DateTime)
     warehouse_id = Column(Integer)
     quantity = Column(Integer)
