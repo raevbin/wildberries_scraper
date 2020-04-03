@@ -1,0 +1,11 @@
+redis
+Scrapy
+scrapyd
+python-scrapyd-api
+geopy
+envparse
+extruct
+fake-useragent
+sqlalchemy
+scrapy-splash
+sqlalchemy-migrate

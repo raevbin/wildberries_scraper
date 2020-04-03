@@ -1,0 +1,25 @@
+version: '3'
+services:
+  scrab:
+    build: ./
+    stdin_open: true
+    tty: true
+    command: bash -c "cd  /data &&
+                    sh start.sh"
+
+    volumes:
+     - ./:/start.sh
+     - ./:/data
+
+  # splash:
+  #   image: scrapinghub/splash:master
+  #   ports:
+  #    - 8050:8050
+
+  # scylla:
+  #   image: wildcat/scylla:latest
+  #   ports:
+  #     - 8899:8899
+  #     - 8081:8081
+  #   volumes:
+  #     - ./scylla_db/:/var/www/scylla/

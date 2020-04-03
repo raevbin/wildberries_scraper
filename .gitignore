@@ -1,0 +1,14 @@
+logs/*
+!logs/.gitkeep
+scylla_db/*
+!scylla_db/.gitkeep
+sql_db/*
+!sql_db/.gitkeep
+wildsearch_crawler/__pycache__/
+wildsearch_crawler/spiders/__pycache__/
+dump.rdb
+twistd.pid
+~/
+~*
+crawls
+dbs
