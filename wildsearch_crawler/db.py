@@ -12,6 +12,10 @@ Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
+cat_item_table = Table('cat_item', Base.metadata,
+    Column('category_id', Integer, ForeignKey('catalog.id')),
+    Column('item_id', Integer, ForeignKey('item.id')))
+
 
 class CatalogModel(Base):
     __tablename__ = 'catalog'
@@ -25,6 +29,8 @@ class CatalogModel(Base):
     recheck_date = Column(DateTime)
     recheck_newname = Column(String(250))
     recheck_found = Column(BOOLEAN)
+    items = relationship("ItemModel",
+                    secondary=cat_item_table)
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -48,13 +54,15 @@ class ItemModel(Base):
     newid = Column(Integer)
     recheck_date = Column(DateTime)
     recheck_found = Column(BOOLEAN)
+    categories = relationship("CatalogModel",
+                    secondary=cat_item_table)
 
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
     def __repr__(self):
-        return f"<Item({self.id}, cat:{self.category_id}, {self.name}, {self.art}>"
+        return f"<Item({self.id}, {self.name}, {self.art}>"
 
 class CostModel(Base):
     __tablename__ = 'cost'
@@ -113,6 +121,7 @@ class OptionModel(Base):
     item_id = Column(Integer, ForeignKey('item.id'))
     date_add = Column(DateTime)
     wb_option_id = Column(Integer)
+    recheck_date = Column(DateTime)
     name = Column(String(30))
 
     def __init__(self, **kwargs):
@@ -195,9 +204,10 @@ class StatProxyModel(Base):
 
 Base.metadata.create_all(engine)
 
+# s.query(IT).join(IT.categories, aliased=True).filter_by(id=11).all()
 
 
-def get_elements_by_id(param, model, element=None):
+def get_elements(param, model, element=None, relation=None):
     element = model.id if not element else element
     ''' param: <str>
         1,2,3,4,5,6-20
@@ -219,7 +229,11 @@ def get_elements_by_id(param, model, element=None):
             else:
                 ids_list.append(int(param_range[0]))
 
-        objects = session.query(model).filter(element.in_(ids_list)).all()
+        if relation:
+            objects = session.query(model).join(relation, aliased=True).\
+                                            filter(element.in_(ids_list)).all()
+        else:
+            objects = session.query(model).filter(element.in_(ids_list)).all()
 
     if objects:
         return [ el for el in objects]

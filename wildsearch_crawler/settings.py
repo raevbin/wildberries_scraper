@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
 from scrapy.utils.log import configure_logging
-
-
 import inspect
 import os
 import pathlib
@@ -10,22 +8,36 @@ FILENAME = inspect.getframeinfo(inspect.currentframe()).filename
 PROJECTPATH = pathlib.Path(os.path.dirname(os.path.abspath(FILENAME)))
 ROOTPATH = PROJECTPATH.parent
 
-DOWNLOAD_TIMEAUT = None
+
+
+ERROR_TRACE_LEVEL = 10
+
+# ====================== DABASE ======================
 
 # DB_ENGINE = f'sqlite:///{ROOTPATH}/sql_db/wildsearch.db'
 DB_ENGINE = 'mysql+mysqldb://root:root@db:3306/wildsearch?charset=utf8'
 
-SPLASH_URL = 'http://splash:8050'
+
+# ====================== PROXY ======================
 SCYLLA_URL = 'http://scylla:8899/api/v1/proxies'
 
 PROXY_LIST_CSV = f'{ROOTPATH}/proxy_list.csv'
 
 PROXY_FILTER = {
-    'protocol': 'socks',
+    'protocol': 'socks', # https, http
 }
+
+PROXY_POSTPONE_ON = 120 # minutes
+
+UPLOAD_NEW_PROXIES_IF_LESS_THAN = 3
+PROXY_SOURSE_DEFAULT = 'csv'
+PROXY_MODE_DEFAULT = 'reload'
+
+
 
 # ====================== DELAY ======================
 # DOWNLOAD_DELAY = 2
+DOWNLOAD_TIMEAUT = 5
 
 # https://docs.scrapy.org/en/latest/topics/autothrottle.html
 AUTOTHROTTLE_ENABLED = True
@@ -40,6 +52,9 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 2.0
 AUTOTHROTTLE_DEBUG = True
 
 
+
+
+# ====================== LOGGER ======================
 
 configure_logging(install_root_handler=False)
 logging.getLogger('scrapy').propagate = False
@@ -147,10 +162,16 @@ ROBOTSTXT_OBEY = False
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
+
+# ====================== SPLASH ======================
+
+SPLASH_URL = 'http://splash:8050'
+
 DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
 
 SPLASH_COOKIES_DEBUG = True
 
+# =============================================================================
 
 SPIDER_MIDDLEWARES = {
     'scrapy_splash.SplashDeduplicateArgsMiddleware': 100,

@@ -1,11 +1,11 @@
 import redis
 import requests
 from urllib.parse import urlencode
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import csv
 import re
 from .db import Session, ProxyModel, StatProxyModel
-from wildsearch_crawler.settings import SCYLLA_URL
+from wildsearch_crawler.settings import SCYLLA_URL, PROXY_POSTPONE_ON
 import logging
 logger = logging.getLogger('main')
 
@@ -136,30 +136,30 @@ class ProxyLoader(object):
 
 
     def _load(self,**kwargs):
-        proxy_list = self.db.query(ProxyModel).\
-                        filter(ProxyModel.ip==kwargs.get('ip')).\
-                        filter(ProxyModel.protocol==kwargs.get('protocol')).\
-                        filter(ProxyModel.port==kwargs.get('port')).all()
+        elements = ["ip", "port", "protocol"]
+        filter = {}
+        mess = 'add proxy to BD'
+        for el in elements:
+            filter[el] = kwargs.get(el)
 
-        proxy = None
-        if proxy_list:
-            proxy = proxy_list[0]
+        proxy = self.db.query(ProxyModel).filter_by(**filter).first()
 
 
         if not proxy:
             proxy = ProxyModel(**kwargs)
-        else:
+            proxy.use_postponed_to = datetime.now()
 
+        else:
             if kwargs.get('authorization'):
                 proxy.authorization = kwargs.get('authorization')
             if kwargs.get('group'):
                 proxy.group = kwargs.get('group')
             if kwargs.get('latency'):
                 proxy.latency = kwargs.get('latency')
-
+            mess = 'updated proxy in BD'
 
         self.db.add(proxy)
-        logger.info(f'add proxy: {proxy}')
+        logger.info(f'{mess} from {kwargs.get("source")}: {proxy}')
 
         self.db.commit()
 
@@ -193,12 +193,20 @@ class ProxyRotator(object):
 
         has_set = self.rdb.get(f'{self.prefix}_has_set')
         if (not has_set) or reload:
+            # print('if (not has_set) or reload:', has_set, reload)
             self._load()
 
     def _load(self):
-        proxy_list = self.db.query(ProxyModel).filter_by(**self.filtres).all()
+        if self.filtres.get('protocol')=='all':
+            self.filtres.pop('protocol')
+        proxy_list = self.db.query(ProxyModel).\
+                filter_by(**self.filtres).\
+                filter(ProxyModel.use_postponed_to < datetime.now()).\
+                all()
+
         proxy_list = [str(el) for el in proxy_list]
         curr_list = self.get_proxy_list()
+
         curr = set(curr_list)
         inp = set(proxy_list)
         diff = list(inp - curr)
@@ -222,15 +230,15 @@ class ProxyRotator(object):
             'protocol': re.findall(r'^\w+', element)[0],
             'port':  int(re.findall(r'\d+$', element)[0]),
         }
-        proxy_list = self.db.query(ProxyModel).filter_by(**param).all()
-        if proxy_list:
-            proxy = proxy_list[0]
+        proxy = self.db.query(ProxyModel).filter_by(**param).first()
+        if proxy:
             stat = StatProxyModel(**{
                 'date': datetime.now(),
                 'is_well': False,
                 'description': message
             })
             proxy.stats.append(stat)
+            proxy.use_postponed_to = datetime.now() + timedelta(minutes=PROXY_POSTPONE_ON)
             self.db.commit()
 
 

@@ -6,8 +6,10 @@ import logging
 from scrapy import signals
 import time
 from wildsearch_crawler.tools import ProxyRotator, ProxyLoader
-from wildsearch_crawler.settings import PROXY_LIST_CSV, PROXY_FILTER
+from wildsearch_crawler.settings import PROXY_LIST_CSV, PROXY_FILTER, ERROR_TRACE_LEVEL
+from wildsearch_crawler.settings import PROXY_SOURSE_DEFAULT, PROXY_MODE_DEFAULT
 from pprint import pprint
+import traceback
 from .base_spider import BaseSpider
 
 
@@ -31,41 +33,48 @@ class ProxyTestSpider(BaseSpider):
 
 
     def start_requests(self):
-        logger.info('------- ProxyTestSpider start_requests -------------')
-        source = getattr(self, 'source', 'csv') #   csv , scylla, none
-        mode = getattr(self, 'mode', 'reload') # reload, reset, current
-        protocol = getattr(self, 'protocol', 'socks') # https,socks, ....
-        group = getattr(self, 'protocol', None)
+        try:
+            logger.info('------- ProxyTestSpider start_requests -------------')
+            source = getattr(self, 'source', PROXY_SOURSE_DEFAULT) #   csv , scylla, none
+            mode = getattr(self, 'mode', PROXY_MODE_DEFAULT) # reload, reset, current
+            protocol = getattr(self, 'protocol', PROXY_FILTER.get('protocol')) # https, socks, all....
+            group = getattr(self, 'group', PROXY_FILTER.get('group'))
 
-        loader = ProxyLoader()
+            loader = ProxyLoader()
 
-        if source == 'csv':
-            loader.from_csv(PROXY_LIST_CSV, group if group else 'new')
-        elif source == 'scylla':
-            loader.from_scylla(PROXY_LIST_CSV)
+            if mode != 'current':
+                if source == 'csv':
+                    loader.from_csv(PROXY_LIST_CSV, group if group else 'new')
+                elif source == 'scylla':
+                    loader.from_scylla()
 
-        proxy = ProxyRotator()
+            proxy = ProxyRotator()
 
-        if protocol:
-            PROXY_FILTER['protocol'] = protocol
-        if group:
-            PROXY_FILTER['group'] = group
+            if protocol:
+                PROXY_FILTER['protocol'] = protocol
+            if group:
+                PROXY_FILTER['group'] = group
 
-        if mode == 'reset':
-            proxy.reset()
+            if mode == 'reset':
+                proxy.reset()
 
-        if mode != 'current':
-            proxy.reload(**PROXY_FILTER)
+            if mode != 'current':
+                proxy.reload(**PROXY_FILTER)
 
-        count = len(proxy.get_proxy_list())
+            count = len(proxy.get_proxy_list())
+            # print('get_proxy_list',proxy.get_proxy_list())
 
 
-        for i in range(count):
-            logger.info(f'current Request  N {i}')
-            yield scrapy.Request('https://mybrowserinfo.com/',
-                    self.parse_item,
-                    errback=self.errback_httpbin,
-                    dont_filter=True)
+            for i in range(count):
+                logger.info(f'current Request  N {i}')
+                yield scrapy.Request('https://mybrowserinfo.com/',
+                        self.parse_item,
+                        errback=self.errback_httpbin,
+                        dont_filter=True)
+
+        except Exception as e:
+            logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
+            raise
 
 
     def parse_item(self, response):

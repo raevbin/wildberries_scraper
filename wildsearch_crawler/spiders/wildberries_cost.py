@@ -8,7 +8,7 @@ from pprint import pprint
 
 from .base_spider import BaseSpider
 from urllib.parse import urlparse, urljoin, urlencode
-from wildsearch_crawler.db import Session, CatalogModel, ItemModel, get_elements_by_id
+from wildsearch_crawler.db import Session, CatalogModel, ItemModel, get_elements
 
 
 logger = logging.getLogger('main')
@@ -28,20 +28,29 @@ class WildberriesCategoriesSpider(BaseSpider):
     portion = 1
 
     def start_requests(self):
-        item_ids = getattr(self, 'item_ids', None)
-
         id_art_list = []
-        if item_ids:
-            objects = get_elements_by_id(item_ids, ItemModel)
-            id_art_list.extend([{str(el.art): el.id} for el in objects])
+        objects = []
 
-        catalog_ids = getattr(self, 'catalog_ids', None)
+        item_id = getattr(self, 'item_id', None)
+        if item_id:
+            objects = get_elements(item_id, ItemModel)
 
-        if catalog_ids:
-            objects = get_elements_by_id(catalog_ids,
-                                        ItemModel, ItemModel.category_id)
-            id_art_list.extend([{str(el.art): el.id} for el in objects])
+        item_cat_id = getattr(self, 'item_cat_id', None)
+        if item_cat_id:
+            objects = get_elements(item_cat_id,
+                                        ItemModel, CatalogModel.id,
+                                        ItemModel.categories)
 
+
+
+        item_art = getattr(self, 'item_art', None)
+        if item_art:
+            objects = get_elements(item_art, ItemModel, ItemModel.art)
+
+
+
+
+        id_art_list.extend([{str(el.art): el.id} for el in objects])
         for art_id_dict in self.get_portion(id_art_list):
 
             art_str = ','.join(list(art_id_dict.keys()))
@@ -75,5 +84,3 @@ class WildberriesCategoriesSpider(BaseSpider):
         data = json.loads(response.text)
         data['art_id_dict'] = art_id_dict
         yield data
-
-    

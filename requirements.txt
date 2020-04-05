@@ -11,3 +11,4 @@ scrapy-splash
 sqlalchemy-migrate
 pymysql
 mysqlclient
+alembic

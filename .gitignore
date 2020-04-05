@@ -15,3 +15,5 @@ twistd.pid
 crawls
 dbs
 proxy_list.csv
+alembic/__pycache__/
+alembic/versions/__pycache__/

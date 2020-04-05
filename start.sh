@@ -1,4 +1,5 @@
 /redis-5.0.7/src/redis-server &
-# cd /data
-#kill 10
+rm /data/twistd.pid
+cd /data
+alembic upgrade head
 scrapyd

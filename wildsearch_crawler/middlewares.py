@@ -2,7 +2,7 @@ from scrapy import signals
 from w3lib.http import basic_auth_header
 from fake_useragent import UserAgent
 from .tools import ProxyRotator
-from .settings import DOWNLOAD_TIMEAUT
+from .settings import DOWNLOAD_TIMEAUT, UPLOAD_NEW_PROXIES_IF_LESS_THAN, PROXY_FILTER
 import logging
 logger = logging.getLogger('main')
 connect_log = logging.getLogger('connect')
@@ -23,8 +23,14 @@ class CustomProxyMiddleware(object):
                 f'Connection refused: proxy deleted, target {target_domen}' )
             count_proxy = len(proxy.get_proxy_list())
             mess = f'Connection refused: proxy {old_proxy} deleted, \
-                    target {target_domen} !!! total servers left {count_proxy}'
+target {target_domen} !!! total servers left {count_proxy}'
             connect_log.error(mess)
+
+            if UPLOAD_NEW_PROXIES_IF_LESS_THAN >= count_proxy:
+                logger.info(f'reload proxy list with current filter {PROXY_FILTER}')
+                proxy.reload(**PROXY_FILTER)
+                logger.info(f'count proxy : {len(proxy.get_proxy_list())}')
+
 
 
         proxy_addr = proxy.next()
@@ -61,7 +67,6 @@ class WildsearchCrawlerSpiderMiddleware(object):
         return None
 
     def process_spider_output(self, response, result, spider):
-
         # Called with the results returned from the Spider, after
         # it has processed the response.
 
@@ -70,6 +75,7 @@ class WildsearchCrawlerSpiderMiddleware(object):
             yield i
 
     def process_spider_exception(self, response, exception, spider):
+        # print('process_spider_exception', exception, spider,  response)
         # Called when a spider or process_spider_input() method
         # (from other spider middleware) raises an exception.
 
@@ -125,6 +131,7 @@ class WildsearchCrawlerDownloaderMiddleware(object):
         return response
 
     def process_exception(self, request, exception, spider):
+        print('process_exception', request, exception, spider)
 
         # Called when a download handler or a process_request()
         # (from other downloader middleware) raises an exception.

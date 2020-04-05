@@ -48,8 +48,10 @@ class WildsearchCrawlerPipeline(object):
                 option_param['date_add'] = current_date
                 option_param['name'] = option_data.get('name')
                 option_mod = OptionModel(**option_param)
-                self.db.add(option_mod)
-                self.db.commit()
+
+            option_mod.recheck_date = current_date
+            self.db.add(option_mod)
+            self.db.commit()
 
             quantities = option_data.get('stocks')
 
@@ -106,18 +108,14 @@ class WildsearchCrawlerPipeline(object):
     def proc_wb(self, item):
         current_date = datetime.now()
 
-        products = self.db.query(ItemModel).filter_by(url=item.get('product_url')).all()
-        product = None
-        if products:
-            product = products[0]
-        else:
+        product = self.db.query(ItemModel).filter_by(url=item.get('product_url')).first()
+        if not product:
             product = ItemModel()
 
         if product.id:
             product.recheck_date = current_date
 
         else:
-            product.category_id = item.get('category_id')
             product.name =  item.get('product_name')
             product.art =  item.get('wb_id')
             product.parent_art =  item.get('wb_parent_id')
@@ -125,6 +123,14 @@ class WildsearchCrawlerPipeline(object):
             product.url =  item.get('product_url')
             product.img_urls =  item.get('image_urls')
             product.date_add = current_date
+
+
+        category = self.db.query(CatalogModel).filter_by(id=item.get('category_id')).first()
+        if category:
+            product.categories.append(category)
+        else:
+            logger.error(f'Pipeline item: category {item.get("category_id")} not found')
+
         self.db.add(product)
 
         self.db.commit()

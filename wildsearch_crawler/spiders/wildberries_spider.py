@@ -7,7 +7,7 @@ from .base_spider import BaseSpider
 from scrapy.loader import ItemLoader
 from wildsearch_crawler.items import WildsearchCrawlerItemWildberries
 from wildsearch_crawler.db import Session, CatalogModel, ItemModel
-from wildsearch_crawler.db import get_catalog_endpoints, get_elements_by_id
+from wildsearch_crawler.db import get_catalog_endpoints, get_elements
 
 logger = logging.getLogger('main')
 
@@ -19,13 +19,29 @@ class WildberriesSpider(BaseSpider):
 
     def start_requests(self):
 
-        item_ids = getattr(self, 'item_ids', None)
+        item_id = getattr(self, 'item_id', None)
         self.limit = getattr(self, 'limit', None)
 
-        if item_ids:
+        item_objects = []
+
+        if item_id:
+            item_objects.extend(get_elements(item_id, ItemModel))
+
+
+        item_cat_id = getattr(self, 'item_cat_id', None)
+        if item_cat_id:
+            item_objects.extend(get_elements(item_cat_id,
+                                        ItemModel, CatalogModel.id,
+                                        ItemModel.categories))
+
+        item_art = getattr(self, 'item_art', None)
+        if item_art:
+            item_objects.extend(get_elements(item_art,
+                                                    ItemModel, ItemModel.art))
+
+        if item_objects:
             self.skip_variants = True
-            for i, el in enumerate(get_elements_by_id(item_ids, ItemModel)):
-                # print('url', el)
+            for i, el in enumerate(item_objects):
                 if i == self.limit:
                     return
                 yield scrapy.Request(el.url, self.parse_good)
@@ -33,14 +49,14 @@ class WildberriesSpider(BaseSpider):
             return
 
 
-        catalog_ids = getattr(self, 'catalog_ids', None) # <number>, <range>, all, endpoints
+        cat_id = getattr(self, 'cat_id', None) # <number>, <range>, all, endpoints
 
-        if catalog_ids:
+        if cat_id:
             objects = []
-            if catalog_ids == 'endpoints':
+            if cat_id == 'endpoints':
                 objects = get_catalog_endpoints()
             else:
-                objects = get_elements_by_id(catalog_ids, CatalogModel)
+                objects = get_elements(cat_id, CatalogModel)
 
 
             for i, el in enumerate(objects):
@@ -125,10 +141,10 @@ class WildberriesSpider(BaseSpider):
             wb_category_position += 1
 
         # follow pagination
-
-
-        # for a in response.css('.pager-bottom a.next'):
-        #     yield response.follow(a, callback=self.parse_category, meta={'current_position': wb_category_position})
+        for a in response.css('.pager-bottom a.next'):
+            yield response.follow(a, callback=self.parse_category,
+            meta={'current_position': wb_category_position},
+            cb_kwargs={'category_id': category_id})
 
     def parse_good(self, response, category_id=None):
 

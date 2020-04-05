@@ -5,6 +5,7 @@ import traceback
 from .base_spider import BaseSpider
 from urllib.parse import urlparse, urljoin
 from wildsearch_crawler.db import Session, CatalogModel
+from wildsearch_crawler.settings import ERROR_TRACE_LEVEL
 
 logger = logging.getLogger('main')
 
@@ -24,7 +25,7 @@ class WildberriesCategoriesSpider(BaseSpider):
                     errback=self.errback_httpbin,
                     dont_filter=True)
         except Exception as e:
-            logger.error(traceback.format_exc(10))
+            logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
             raise
 
 
@@ -67,7 +68,7 @@ class WildberriesCategoriesSpider(BaseSpider):
             self.appropriation_parent_id()
             self.print_report()
         except Exception as e:
-            logger.error(traceback.format_exc(10))
+            logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
             raise
 
 
@@ -111,7 +112,7 @@ class WildberriesCategoriesSpider(BaseSpider):
             try:
                 self.write(data)
             except Exception as e:
-                logger.error(traceback.format_exc(10))
+                logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
                 raise
 
         return
