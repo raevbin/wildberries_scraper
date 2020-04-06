@@ -107,26 +107,28 @@ class WildsearchCrawlerPipeline(object):
 
     def proc_wb(self, item):
         current_date = datetime.now()
+        overwrite = item.get('overwrite')
 
         product = self.db.query(ItemModel).filter_by(url=item.get('product_url')).first()
         if not product:
             product = ItemModel()
+            overwrite = True
 
         if product.id:
             product.recheck_date = current_date
 
         else:
-            product.name =  item.get('product_name')
             product.art =  item.get('wb_id')
             product.parent_art =  item.get('wb_parent_id')
             product.marketplace = 1
             product.url =  item.get('product_url')
-            product.img_urls =  item.get('image_urls')
             product.date_add = current_date
 
-        if item.get('specification'):
+        if overwrite:
+            product.name = item.get('product_name')
             product.specification = item.get('specification')
-
+            product.img_urls =  item.get('image_urls')
+            product.seller = item.get('wb_brand_name')
 
 
         category = self.db.query(CatalogModel).filter_by(id=item.get('category_id')).first()

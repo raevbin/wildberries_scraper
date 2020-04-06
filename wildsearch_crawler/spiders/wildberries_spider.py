@@ -19,7 +19,7 @@ logger = logging.getLogger('main')
 class WildberriesSpider(BaseSpider):
     name = "wb"
     limit = None
-    spec_overwrite = True
+    overwrite = False
 
 
     def start_requests(self):
@@ -100,9 +100,8 @@ class WildberriesSpider(BaseSpider):
 
         # follow links to goods pages
         for item in response.css('.catalog-content .j-card-item'):
-
-            logger.info(f'>>> parse item {item}')
             good_url = item.css('a.ref_goods_n_p::attr(href)')
+            
 
             if skip_details:
                 # ItemLoader выключен в угоду скорости
@@ -247,8 +246,9 @@ class WildberriesSpider(BaseSpider):
             loader.add_value('wb_category_position', wb_category_position)
             loader.add_value('category_id', category_id)
 
-            if self.spec_overwrite:
-                loader.add_value('specification', self.get_specification(response))
+            # if self.overwrite:
+            loader.add_value('specification', self.get_specification(response))
+            loader.add_value('overwrite', self.overwrite)
 
 
 
