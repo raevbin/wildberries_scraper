@@ -12,3 +12,4 @@ sqlalchemy-migrate
 pymysql
 mysqlclient
 alembic
+transliterate

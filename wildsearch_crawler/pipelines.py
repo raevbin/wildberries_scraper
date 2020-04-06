@@ -124,6 +124,10 @@ class WildsearchCrawlerPipeline(object):
             product.img_urls =  item.get('image_urls')
             product.date_add = current_date
 
+        if item.get('specification'):
+            product.specification = item.get('specification')
+
+
 
         category = self.db.query(CatalogModel).filter_by(id=item.get('category_id')).first()
         if category:

@@ -11,6 +11,10 @@ def clear_price(text):
 
 class WildsearchCrawlerItemWildberries(scrapy.Item):
 
+    specification = instock = scrapy.Field(
+        output_processor=TakeFirst()
+    )
+
     instock = scrapy.Field(
         output_processor=TakeFirst()
     )

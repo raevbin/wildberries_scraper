@@ -54,8 +54,10 @@ class ItemModel(Base):
     newid = Column(Integer)
     recheck_date = Column(DateTime)
     recheck_found = Column(BOOLEAN)
+    specification = Column(JSON)
     categories = relationship("CatalogModel",
                     secondary=cat_item_table)
+
 
 
     def __init__(self, **kwargs):

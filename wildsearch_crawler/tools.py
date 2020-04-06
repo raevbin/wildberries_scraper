@@ -197,12 +197,22 @@ class ProxyRotator(object):
             self._load()
 
     def _load(self):
-        if self.filtres.get('protocol')=='all':
-            self.filtres.pop('protocol')
-        proxy_list = self.db.query(ProxyModel).\
-                filter_by(**self.filtres).\
-                filter(ProxyModel.use_postponed_to < datetime.now()).\
-                all()
+
+        protocol_raw = self.filtres.pop('protocol')
+        query = self.db.query(ProxyModel).filter_by(**self.filtres)
+        query = query.filter(ProxyModel.use_postponed_to < datetime.now())
+
+        if protocol_raw !='all':
+            protocol_list = protocol_raw.split(',')
+            query = query.filter(ProxyModel.protocol.in_(protocol_list))
+
+        proxy_list = query.all()
+
+        # proxy_list = self.db.query(ProxyModel).\
+        #         filter_by(**self.filtres).\
+        #         filter(ProxyModel.use_postponed_to < datetime.now()).\
+        #         filter(ProxyModel.protocol.id.in_(protocol_list)).\
+        #         all()
 
         proxy_list = [str(el) for el in proxy_list]
         curr_list = self.get_proxy_list()
