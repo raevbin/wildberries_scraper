@@ -126,6 +126,41 @@ Base.metadata.create_all(engine)
 
 
 
+def get_id_list(param):
+    param_list = param.split(',')
+    ids_list = []
+    for param in param_list:
+        param_range = param.split('-')
+        if len(param_range) == 2:
+            first = int(param_range[0])
+            second = int(param_range[1])+1
+            ids_list.extend(list(range(first,second)))
+        else:
+            ids_list.append(int(param_range[0]))
+    return ids_list
+
+
+def get_end_points_by_top_of_bush(param):
+    ids_list = get_id_list(param)
+    session = Session()
+    objects = session.query(CatalogModel).filter(CatalogModel.id.in_(ids_list)).all()
+    endp_objects = []
+
+    def search_end_points(obj_list):
+        for el in obj_list:
+            if el.end_point:
+                endp_objects.append(el)
+            else:
+                next_objects = session.query(CatalogModel).filter_by(upper_ozon_id=el.ozon_id).all()
+                if next_objects:
+                    search_end_points(next_objects)
+
+    search_end_points(objects)
+
+    return list(set(endp_objects))
+
+
+
 def get_elements(param, model, element=None, relation=None):
     element = model.id if not element else element
     ''' param: <str>
@@ -137,16 +172,17 @@ def get_elements(param, model, element=None, relation=None):
     if param == 'all':
         objects = session.query(model).all()
     else:
-        param_list = param.split(',')
-        ids_list = []
-        for param in param_list:
-            param_range = param.split('-')
-            if len(param_range) == 2:
-                first = int(param_range[0])
-                second = int(param_range[1])+1
-                ids_list.extend(list(range(first,second)))
-            else:
-                ids_list.append(int(param_range[0]))
+        ids_list = get_id_list(param)
+        # param_list = param.split(',')
+        # ids_list = []
+        # for param in param_list:
+        #     param_range = param.split('-')
+        #     if len(param_range) == 2:
+        #         first = int(param_range[0])
+        #         second = int(param_range[1])+1
+        #         ids_list.extend(list(range(first,second)))
+        #     else:
+        #         ids_list.append(int(param_range[0]))
 
         if relation:
             objects = session.query(model).join(relation, aliased=True).\

@@ -12,8 +12,3 @@ CatalogModel as CT, ItemModel as IT
 CostModel as CS, ReviewModel as RV,
 QuantityModel as QT, ProxyLoader as PL, ProxyRotator as PR
 '''
-def get_endpoints():
-    for el in get_catalog_endpoints():
-        yield el.id, el.url
-
-endpoint = get_endpoints()

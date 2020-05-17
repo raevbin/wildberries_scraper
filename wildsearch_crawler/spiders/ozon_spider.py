@@ -8,7 +8,7 @@ from wildsearch_crawler.tools import DeepDict, find_keys, find_value
 from urllib.parse import quote
 from .base_spider import BaseSpider
 from wildsearch_crawler.settings import ERROR_TRACE_LEVEL
-from wildsearch_crawler.db.ozon import CatalogModel, ItemModel, get_elements, Session
+from wildsearch_crawler.db.ozon import CatalogModel, ItemModel, get_elements, Session, get_end_points_by_top_of_bush
 
 logger = logging.getLogger('main')
 
@@ -86,8 +86,9 @@ class WildberriesSpider(BaseSpider):
                     objects = Session().query(CatalogModel
                                     ).filter_by(end_point=True).all()
                 else:
-                    objects = get_elements(cat_id, CatalogModel)
-
+                    # objects = get_elements(cat_id, CatalogModel)
+                    objects = get_end_points_by_top_of_bush(cat_id)
+    
                 for i, el in enumerate(objects):
                     if i == self.limit:
                         return
