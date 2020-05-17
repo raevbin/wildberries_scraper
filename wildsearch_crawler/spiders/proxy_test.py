@@ -39,6 +39,7 @@ class ProxyTestSpider(BaseSpider):
             mode = getattr(self, 'mode', PROXY_MODE_DEFAULT) # reload, reset, current
             protocol = getattr(self, 'protocol', PROXY_FILTER.get('protocol')) # https, socks, all....
             group = getattr(self, 'group', PROXY_FILTER.get('group'))
+            use_postponed = getattr(self, 'use_postponed', False)
 
             loader = ProxyLoader()
 
@@ -55,6 +56,9 @@ class ProxyTestSpider(BaseSpider):
             if group:
                 PROXY_FILTER['group'] = group
 
+            if use_postponed:
+                PROXY_FILTER['use_postponed'] = True
+
             if mode == 'reset':
                 proxy.reset()
 
@@ -62,7 +66,7 @@ class ProxyTestSpider(BaseSpider):
                 proxy.reload(**PROXY_FILTER)
 
             count = len(proxy.get_proxy_list())
-            # print('get_proxy_list',proxy.get_proxy_list())
+            # print('get_proxy_list', proxy.get_proxy_list())
 
 
             for i in range(count):

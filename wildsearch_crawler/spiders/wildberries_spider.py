@@ -9,8 +9,8 @@ import traceback
 from .base_spider import BaseSpider
 from scrapy.loader import ItemLoader
 from wildsearch_crawler.items import WildsearchCrawlerItemWildberries
-from wildsearch_crawler.db import Session, CatalogModel, ItemModel
-from wildsearch_crawler.db import get_catalog_endpoints, get_elements
+from wildsearch_crawler.db.wildsearch import Session, CatalogModel, ItemModel, get_catalog_endpoints, get_elements
+# from wildsearch_crawler.tools import get_elements
 from wildsearch_crawler.settings import ERROR_TRACE_LEVEL
 
 logger = logging.getLogger('main')
@@ -101,7 +101,7 @@ class WildberriesSpider(BaseSpider):
         # follow links to goods pages
         for item in response.css('.catalog-content .j-card-item'):
             good_url = item.css('a.ref_goods_n_p::attr(href)')
-            
+
 
             if skip_details:
                 # ItemLoader выключен в угоду скорости

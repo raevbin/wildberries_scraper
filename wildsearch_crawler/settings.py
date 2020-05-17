@@ -4,6 +4,25 @@ from scrapy.utils.log import configure_logging
 import inspect
 import os
 import pathlib
+from selenium.webdriver.remote.remote_connection import LOGGER
+from urllib3.connectionpool import log as urllibLogger
+def set_level_logging(level):
+    urllibLogger.setLevel(level)
+    LOGGER.setLevel(level)
+
+
+
+# from shutil import which
+#
+# SELENIUM_DRIVER_NAME = 'chrome'
+# # SELENIUM_DRIVER_EXECUTABLE_PATH = which('geckodriver')
+# SELENIUM_COMMAND_EXECUTOR = 'http://selenoid:4444/wd/hub'
+# SELENIUM_DRIVER_ARGUMENTS=['--headless']
+
+SELENOID_HUB = 'http://selenoid:4444/wd/hub'
+SELENOID_STATUS_URL =  'http://selenoid:4444/status'
+
+
 FILENAME = inspect.getframeinfo(inspect.currentframe()).filename
 PROJECTPATH = pathlib.Path(os.path.dirname(os.path.abspath(FILENAME)))
 ROOTPATH = PROJECTPATH.parent
@@ -14,8 +33,9 @@ ERROR_TRACE_LEVEL = 10
 
 # ====================== DABASE ======================
 
-# DB_ENGINE = f'sqlite:///{ROOTPATH}/sql_db/wildsearch.db'
-DB_ENGINE = 'mysql+mysqldb://root:root@db:3306/wildsearch?charset=utf8'
+
+WS_DB_ENGINE = 'mysql+mysqldb://root:root@db:3306/wildsearch?charset=utf8'
+OZ_DB_ENGINE = 'mysql+mysqldb://root:root@db:3306/ozon?charset=utf8'
 
 
 # ====================== PROXY ======================
@@ -59,6 +79,9 @@ AUTOTHROTTLE_DEBUG = True
 configure_logging(install_root_handler=False)
 logging.getLogger('scrapy').propagate = False
 LOG_ENABLED = False
+
+
+set_level_logging(logging.WARNING)
 
 
 logging.config.dictConfig({
@@ -124,6 +147,9 @@ logging.config.dictConfig({
         # },
 })
 
+
+
+
 BOT_NAME = 'wildsearch_crawler'
 
 SPIDER_MODULES = ['wildsearch_crawler.spiders']
@@ -185,6 +211,7 @@ DOWNLOADER_MIDDLEWARES = {
     'wildsearch_crawler.middlewares.CustomProxyMiddleware': 350,
     'scrapy_splash.SplashCookiesMiddleware': 723,
     'scrapy_splash.SplashMiddleware': 725,
+    # 'scrapy_selenium.SeleniumMiddleware': 800,
     'wildsearch_crawler.middlewares.WildsearchCrawlerDownloaderMiddleware': 543,
     'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware': 810,
 }

@@ -8,7 +8,8 @@ from pprint import pprint
 
 from .base_spider import BaseSpider
 from urllib.parse import urlparse, urljoin, urlencode
-from wildsearch_crawler.db import Session, CatalogModel, ItemModel, get_elements
+from wildsearch_crawler.db.wildsearch import Session, CatalogModel, ItemModel, get_elements
+
 
 
 logger = logging.getLogger('main')

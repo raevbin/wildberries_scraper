@@ -3,10 +3,108 @@ from scrapy_splash import SplashRequest
 import logging
 from pprint import pprint
 from urllib.parse import urlencode
+from fake_useragent import UserAgent
+user_agent = UserAgent()
 
 logger = logging.getLogger('main')
 
+
+# js_script = '''
+#   window.step = function() {
+#     var num = localStorage.getItem('step');
+#     if (num) {
+#       num = Number(num);
+#     }else{
+#       num = 0;
+#     }
+#     num = num + 1;
+#     localStorage.setItem('step', num);
+#     return num
+#   }
+# '''
+
+js_script = """
+window.step = function() {}
+"""
+
+
+#   window.manage = function (){
+#     var current_step = step();
+#     switch (current_step) {
+#       case 1:
+#         set_urban();
+#         break;
+#       case 2:
+#         set_id();
+#         set_plot();
+#         click_search();
+#         break;
+#       case 3:
+#         break;
+#       default:
+#     }
+#   }
+#
+#   window.set_urban = function(){
+#     var sel_urban = $('.ms-formbody select').eq(0);
+#     var option = sel_urban.find('option').eq(1);
+#     option.attr('selected','selected');
+#     sel_urban.change();
+#   }
+#
+#   window.set_id = function() {
+#     var sel_id = $('.ms-formbody select').eq(1);
+#     var option = sel_id.find('option').eq(1);
+#     option.attr('selected','selected');
+#     sel_id.change();
+#   }
+#
+#   window.set_plot = function() {
+#     var inp_plot = $('.ms-formbody input[type="text"]');
+#     inp_plot.val(1);
+#   }
+#
+#   window.click_search = function() {
+#     var inp_search = $('.ms-formbody input[value="Search"]');
+#     inp_search.click();
+#   }
+#
+#   window.reset = function() {
+#     localStorage.removeItem('step');
+#   }
+# '''
+
+
 lua_script = """
+function main(splash)
+  splash:init_cookies(splash.args.cookies)
+  assert(splash:go{
+    splash.args.url,
+    headers=splash.args.headers,
+    http_method=splash.args.http_method
+
+    })
+  assert(splash:wait(2))
+
+  local entries = splash:history()
+  local last_response = entries[#entries].response
+
+
+  return {
+    url = splash:url(),
+    headers = last_response.headers,
+    http_status = last_response.status,
+    cookies = splash:get_cookies(),
+    html = splash:html(),
+
+  }
+end
+"""
+# % js_script
+ #    result = result
+ # local result = splash:runjs("step()")
+  # assert(splash:runjs("%s"))
+lua_script_ = """
 function main(splash)
   splash:init_cookies(splash.args.cookies)
   assert(splash:go{
@@ -19,21 +117,28 @@ function main(splash)
 
   local entries = splash:history()
   local last_response = entries[#entries].response
+
+
   return {
     url = splash:url(),
     headers = last_response.headers,
     http_status = last_response.status,
     cookies = splash:get_cookies(),
     html = splash:html(),
+
   }
 end
 """
-delete_items = """
+
+
+
+#
+  #
+#
+lua_script = """
 function main(splash)
     assert(splash:go(splash.args.url))
-    splash:wait(2)
-    local title = splash:evaljs("$('.btn-withDotted-cross.j-basket-item-del').click()")
-    return {title=title}
+    return {result=0}
 end
 """
 
@@ -44,7 +149,7 @@ class MySpider(scrapy.Spider):
 
     name = 'test_splash'
     start_urls = [
-                "https://www.wildberries.ru/catalog/zhenshchinam/odezhda/bluzki-i-rubashki"
+                "https://www.hsvphry.org.in/Pages/PlotStatusEnquiry.aspx"
                 ]
 
     def start_requests(self):
@@ -52,125 +157,30 @@ class MySpider(scrapy.Spider):
 #
         for url in self.start_urls:
             print(f'parse url >> {url}')
-            yield SplashRequest(url, self.parse,
-                                    # args={'wait': 10},
-                                    # endpoint='render.json',
-                                    endpoint='execute',
-                                    session_id=1,
-                                    # headers=response.data['headers'],
-                                    cache_args=['lua_source'],
-                                    args={'lua_source': lua_script,
-                                            'wait': 2},
-                                    # headers={'X-My-Header': 'value'},
-                                    )
+            try:
+                yield SplashRequest(url, self.parse,
+                                        # args={'wait': 10},
+                                        # endpoint='render.json',
+                                        endpoint='execute',
+                                        session_id=1,
+                                        # headers={
+                                        #     'User-Agent': user_agent.random
+                                        # },
+                                        cache_args=['lua_source'],
+                                        args={
+                                                'lua_source': lua_script,
+                                                'wait': 2},
+                                        # headers={'X-My-Header': 'value'},
+                                        )
+            except Exception as e:
+                print('Exception',e)
+                raise
 
-    def parse_item(self, response):
-        logger.info('\n\n\n\n')
-        logger.info(response.text)
-
-        # item_list = response.css('.item .j-b-basket-item .first')
-        # logger.info(f' BOND  {response.css(".bond::text").get()}')
-        # logger.info(f' EMPTY {response.css(".i-empty-basket::text").get()}')
-
-        # logger.info(f'--==== parse_item ===== {len(item_list)}')
-        # logger.info(f'{response.meta}')
-        # #
-        # for el in response.cookiejar:
-        #     logger.info(f'{el}')
-        #
-        # logger.info('\n\n\n\n')
-
-    def add_to_basket(self, response):
-        logger.info(f'add_to_basket ===== {response.data["headers"]}')
 
     def parse(self, response):
-        logger.info('\n\n\n\n')
-        logger.info(response.css('title::text').get())
-        # logger.info(f'headers ===== {response.data["headers"]}')
-
-
-        list_item = [
-            # 'https://www.wildberries.ru/catalog/8944425/detail.aspx',
-            # 'https://www.wildberries.ru/catalog/9219814/detail.aspx'
-        ]
-
-        # https://lk.wildberries.ru/product/addtobasket
-
-        # referer: https://www.wildberries.ru/catalog/8944425/detail.aspx?targetUrl=GP
-        # referer: https://www.wildberries.ru/catalog/9219814/detail.aspx?targetUrl=GP
-
-
-        # urlencode(a, doseq=True)
-
-        param_list = [
-            {'cod1S': 8944425,
-            'characteristicId': 30033149,
-            'quantity': 1,
-            'isCredit': 'false',
-            'rowId': 0,
-            'openTime': '30/03/2020 23:28:50',
-            'sizeName': 34,
-            'priceWithCouponAndDiscount': 1750,
-            'targetUrl': 'GP',
-            'targetCode': 0,
-            'source': 'BigCard'},
-
-            {'cod1S': 9219814,
-            'characteristicId': 30790714,
-            'quantity': 1,
-            'isCredit': 'false',
-            'rowId': 0,
-            'openTime': '30/03/2020 23:28:50',
-            'sizeName': 36,
-            'priceWithCouponAndDiscount': 1750,
-            'targetUrl': 'GP',
-            'targetCode': 0,
-            'source': 'BigCard'}
-
-        ]
-
-        headers = [
-            {'name': 'referer',
-             'value': 'https://www.wildberries.ru/catalog/8944425/detail.aspx?targetUrl=GP'
-             },
-             {'name': 'referer',
-              'value': 'https://www.wildberries.ru/catalog/9219814/detail.aspx?targetUrl=GP'
-              },
-        ]
-
-        for i in range(2):
-            # print(f'parse url >> {url}')
-            yield SplashRequest('https://lk.wildberries.ru/product/addtobasket',
-                                    self.add_to_basket,
-                                    endpoint='execute',
-                                    session_id=1,
-                                    # headers=response.data['headers'],
-                                    headers=[headers[i]],
-                                    cache_args=['lua_source'],
-                                    args={'lua_source': lua_script,
-                                    'wait': 2,
-                                    'http_method': 'POST',
-                                    'body': urlencode(param_list[i], doseq=True)},
-                                    )
-
-
-        yield SplashRequest( 'https://lk.wildberries.ru/basket',
-                                self.parse_item,
-                                endpoint='execute',
-                                session_id=1,
-                                cache_args=['lua_source'],
-                                args={'lua_source': lua_script,
-                                'wait': 2,
-                                },
-                                )
-        yield SplashRequest( 'https://lk.wildberries.ru/basket',
-                                self.parse_item,
-                                endpoint='execute',
-                                session_id=1,
-                                cache_args=['lua_source'],
-                                args={'lua_source': delete_items,
-                                'wait': 2,
-                                },
-                                )
-
-        # $('.btn-withDotted-cross.j-basket-item-del')
+        print('response',response)
+        # logger.info('\n\n\n\n table[cellspacing] tbody tr th')
+        # logger.info(response.css('table[cellspacing] tbody tr th'))
+        # logger.info('\nhtml\n')
+        # logger.info(response.html)
+        return {}

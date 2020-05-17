@@ -4,7 +4,7 @@ import scrapy
 import traceback
 from .base_spider import BaseSpider
 from urllib.parse import urlparse, urljoin
-from wildsearch_crawler.db import Session, CatalogModel
+from wildsearch_crawler.db.wildsearch import Session, CatalogModel
 from wildsearch_crawler.settings import ERROR_TRACE_LEVEL
 
 logger = logging.getLogger('main')

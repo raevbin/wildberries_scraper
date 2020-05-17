@@ -1,8 +1,9 @@
 from scrapy import signals
 from w3lib.http import basic_auth_header
 from fake_useragent import UserAgent
+import traceback
 from .tools import ProxyRotator
-from .settings import DOWNLOAD_TIMEAUT, UPLOAD_NEW_PROXIES_IF_LESS_THAN, PROXY_FILTER
+from .settings import DOWNLOAD_TIMEAUT, UPLOAD_NEW_PROXIES_IF_LESS_THAN, PROXY_FILTER, ERROR_TRACE_LEVEL
 import logging
 logger = logging.getLogger('main')
 connect_log = logging.getLogger('connect')
@@ -11,40 +12,45 @@ user_agent = UserAgent()
 
 proxy = ProxyRotator()
 
-
 class CustomProxyMiddleware(object):
     def process_request(self, request, spider):
-
-        retry_times = request.meta.get('retry_times')
-        if retry_times:
-            old_proxy = request.meta.get('proxy')
-            target_domen = request.meta.get('download_slot')
-            proxy.delete(old_proxy,
-                f'Connection refused: proxy deleted, target {target_domen}' )
-            count_proxy = len(proxy.get_proxy_list())
-            mess = f'Connection refused: proxy {old_proxy} deleted, \
+        # print('==== process_request ==== ')
+        try:
+            is_off_proxy = request.meta.get('off_proxy')
+            if not is_off_proxy:
+                retry_times = request.meta.get('retry_times')
+                if retry_times:
+                    old_proxy = request.meta.get('proxy')
+                    target_domen = request.meta.get('download_slot')
+                    proxy.delete(old_proxy,
+                        f'Connection refused: proxy deleted, target {target_domen}' )
+                    count_proxy = len(proxy.get_proxy_list())
+                    mess = f'Connection refused: proxy {old_proxy} deleted, \
 target {target_domen} !!! total servers left {count_proxy}'
-            connect_log.error(mess)
+                    connect_log.error(mess)
 
-            if UPLOAD_NEW_PROXIES_IF_LESS_THAN >= count_proxy:
-                logger.info(f'reload proxy list with current filter {PROXY_FILTER}')
-                proxy.reload(**PROXY_FILTER)
-                logger.info(f'count proxy : {len(proxy.get_proxy_list())}')
+                    if UPLOAD_NEW_PROXIES_IF_LESS_THAN >= count_proxy:
+                        logger.info(f'reload proxy list with current filter {PROXY_FILTER}')
+                        proxy.reload(**PROXY_FILTER)
+                        logger.info(f'count proxy : {len(proxy.get_proxy_list())}')
 
 
 
-        proxy_addr = proxy.next()
-        if proxy_addr:
-            logger.info(f'use proxy: { proxy_addr}')
-            request.meta['proxy'] = proxy_addr
-        else:
-            logger.info(f'>>> !!! there are no more servers left. \
-                                                    using primary address !!!')
+                proxy_addr = proxy.next()
+                if proxy_addr:
+                    logger.info(f'use proxy: { proxy_addr}')
+                    request.meta['proxy'] = proxy_addr
+                else:
+                    logger.info(f'>>> !!! there are no more servers left. using primary address !!!')
 
-        if DOWNLOAD_TIMEAUT:
-            request.meta['download_timeout'] = DOWNLOAD_TIMEAUT
+            if DOWNLOAD_TIMEAUT:
+                request.meta['download_timeout'] = DOWNLOAD_TIMEAUT
 
-        request.headers['User-Agent'] = user_agent.random
+            request.headers['User-Agent'] = user_agent.random
+        except Exception as e:
+            logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
+            raise
+
 
 
 class WildsearchCrawlerSpiderMiddleware(object):

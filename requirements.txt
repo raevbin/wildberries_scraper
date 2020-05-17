@@ -13,3 +13,5 @@ pymysql
 mysqlclient
 alembic
 transliterate
+selenium
+bs4

@@ -17,3 +17,10 @@ dbs
 proxy_list.csv
 alembic/__pycache__/
 alembic/versions/__pycache__/
+wildsearch_crawler/spiders/test_splash_.py
+wildsearch_crawler/spiders/test_splash.py
+migrations/ozon/__pycache__/
+migrations/ozon/versions/__pycache__/
+migrations/wildsearch/__pycache__/
+migrations/wildsearch/versions/__pycache__/
+wildsearch_crawler/db/__pycache__

@@ -1,4 +1,4 @@
-from .settings import DB_ENGINE
+from wildsearch_crawler.settings import WS_DB_ENGINE
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
 from sqlalchemy import FLOAT, DateTime, SmallInteger, BOOLEAN, JSON
@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text as SqlText
+DB_ENGINE = WS_DB_ENGINE
 engine = create_engine(DB_ENGINE)
 Session = sessionmaker(bind=engine)
 
@@ -152,7 +153,9 @@ class QuantityModel(Base):
     def __repr__(self):
         return f"<Quantity({self.id}, opt:{self.option_id}, wh:{self.warehouse_id}, qty:{self.quantity}>"
 
-
+# -------------------------------------===========================
+# ================================================================
+# ================================================================
 
 
 class ProxyModel(Base):
@@ -242,7 +245,7 @@ def get_elements(param, model, element=None, relation=None):
     else:
         return []
 
-
+#
 def get_catalog_endpoints():
     class Element:
         def __init__(self, id, url):

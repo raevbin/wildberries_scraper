@@ -2,6 +2,10 @@ version: '3'
 services:
   scrab:
     build: ./
+    network_mode: bridge
+    links:
+      - selenoid
+      - db
     stdin_open: true
     tty: true
     command: bash -c "cd  /data &&
@@ -23,9 +27,12 @@ services:
   #     - 8081:8081
   #   volumes:
   #     - ./scylla_db/:/var/www/scylla/
+
+
   db:
     image: mysql:5.7
-    restart: always
+    network_mode: bridge
+    # restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: wildsearch
@@ -38,3 +45,21 @@ services:
       - ./mysql_db:/var/lib/mysql
       - ./init_mysql/mycustom.cnf:/etc/mysql/conf.d/custom.cnf
       - ./init_mysql/init.sql:/data/init_mysql/init.sql
+
+  selenoid:
+    image: "aerokube/selenoid"
+    network_mode: bridge
+    ports:
+      - "4444:4444"
+    volumes:
+      - "./selenoid:/etc/selenoid/"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  selenoid-ui:
+    image: "aerokube/selenoid-ui"
+    network_mode: bridge
+    links:
+      - selenoid
+    ports:
+      - "8080:8080"
+    command: ["--selenoid-uri", "http://selenoid:4444"]

@@ -44,6 +44,11 @@ class BaseSpider(scrapy.Spider):
         logger.info(f'''\nSpider closed: {self.name}, number:{self.number}
         stat:\n{stat}\n\n''')
 
+        errors = getattr(self, 'errors', [])
+        for error in errors:
+            logger.info(f'{error}')
+
+
     def spider_closed(self, spider, reason):
         self.print_report()
 

@@ -4,10 +4,37 @@ from urllib.parse import urlencode
 from datetime import datetime, date, timedelta
 import csv
 import re
-from .db import Session, ProxyModel, StatProxyModel
-from wildsearch_crawler.settings import SCYLLA_URL, PROXY_POSTPONE_ON
+import os
+import uuid
+import time
+from tempfile import gettempdir
+from selenium import webdriver
+import pathlib
+import zipfile
+import traceback
+from fake_useragent import UserAgent
+
+from .db.wildsearch import Session, ProxyModel, StatProxyModel
+from wildsearch_crawler.settings import SCYLLA_URL, PROXY_POSTPONE_ON, SELENOID_HUB, UPLOAD_NEW_PROXIES_IF_LESS_THAN
 import logging
+
+
+
 logger = logging.getLogger('main')
+
+
+
+def find_keys(word,data_dict):
+    keys_str = ','.join(data_dict.keys())
+    return re.findall(f'({word}.+?),',keys_str)
+
+
+def find_value(word, data_dict, keys):
+    for key in keys:
+        val = data_dict.get(key)
+        res = re.findall(word,val)
+        if res:
+            yield key
 
 
 def date_for_json(o):
@@ -180,6 +207,7 @@ class ProxyRotator(object):
                 redis_config=None,
                 redis_prefix='proxy_rotator',
                 reload=False,
+                use_postponed=False,
                 **filtres,
                 # protocol='https',
                 # country=None,
@@ -189,7 +217,9 @@ class ProxyRotator(object):
         self.rdb = redis.Redis(**config)
         self.db = Session()
         self.prefix = redis_prefix
+        self.use_postponed = use_postponed
         self.filtres = filtres
+
 
         has_set = self.rdb.get(f'{self.prefix}_has_set')
         if (not has_set) or reload:
@@ -197,16 +227,19 @@ class ProxyRotator(object):
             self._load()
 
     def _load(self):
-
+        # print('ProxyRotator self.filtres', self.filtres)
         protocol_raw = self.filtres.pop('protocol')
         query = self.db.query(ProxyModel).filter_by(**self.filtres)
-        query = query.filter(ProxyModel.use_postponed_to < datetime.now())
+        if not self.use_postponed:
+            query = query.filter(ProxyModel.use_postponed_to < datetime.now())
 
         if protocol_raw !='all':
             protocol_list = protocol_raw.split(',')
             query = query.filter(ProxyModel.protocol.in_(protocol_list))
 
         proxy_list = query.all()
+
+        # print('proxy_list\n', proxy_list)
 
         # proxy_list = self.db.query(ProxyModel).\
         #         filter_by(**self.filtres).\
@@ -224,7 +257,8 @@ class ProxyRotator(object):
             self.rdb.lpush(f'{self.prefix}_proxy_list', *diff)
             self.rdb.set(f'{self.prefix}_has_set', 1)
 
-    def reload(self, **filtres):
+    def reload(self,use_postponed=False, **filtres):
+        self.use_postponed = use_postponed
         self.filtres = filtres
         self._load()
 
@@ -271,3 +305,225 @@ class ProxyRotator(object):
             return None
         self.rdb.lpush(f'{self.prefix}_proxy_list', addr)
         return addr
+
+
+def proxy_url_to_dict(proxy_url):
+    out = {'url':proxy_url}
+    stage1 = proxy_url.split('://')
+    out['protocol'] = stage1[0]
+    # if out['protocol'] == 'socks':
+    #     out['protocol'] = 'socks4'
+    stage2 = stage1[-1].split('@')
+    if len(stage2) > 1:
+        name_pass = stage2[0].split(':')
+        out['user'] = name_pass[0]
+        out['password'] = name_pass[1]
+
+    addr_port = stage2[-1].split(':')
+    out['host'] = addr_port[0]
+    out['port'] = addr_port[1]
+    return out
+
+
+
+
+
+
+class OptionsMaker(object):
+    def __init_(self):
+        pass
+
+    def get_chrome_proxy_extensions(self, proxy):
+        manifest_json = """
+        {
+            "version": "1.0.0",
+            "manifest_version": 2,
+            "name": "Chrome Proxy",
+            "permissions": [
+                "proxy",
+                "tabs",
+                "unlimitedStorage",
+                "storage",
+                "<all_urls>",
+                "webRequest",
+                "webRequestBlocking"
+            ],
+            "background": {
+                "scripts": ["background.js"]
+            },
+            "minimum_chrome_version":"22.0.0"
+        }
+        """
+
+        background_js = """
+        var config = {
+                mode: "fixed_servers",
+                rules: {
+                  singleProxy: {
+                    scheme: "http",
+                    host: "%s",
+                    port: parseInt(%s)
+                  },
+                  bypassList: ["localhost"]
+                }
+              };
+
+        chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+
+        function callbackFn(details) {
+            return {
+                authCredentials: {
+                    username: "%s",
+                    password: "%s"
+                }
+            };
+        }
+
+        chrome.webRequest.onAuthRequired.addListener(
+                    callbackFn,
+                    {urls: ["<all_urls>"]},
+                    ['blocking']
+        );
+        """ % (proxy['host'], proxy['port'], proxy['user'], proxy['password'])
+
+        temp_dir = pathlib.Path(gettempdir())
+        pluginfile = f'{temp_dir / str(uuid.uuid1())}.zip'
+
+        chrome_options = webdriver.ChromeOptions()
+
+        with zipfile.ZipFile(pluginfile, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+
+        chrome_options.add_extension(pluginfile)
+        extensions = chrome_options.extensions
+        del chrome_options
+        os.remove(pluginfile)
+        return extensions
+
+
+    def chrome(self, proxy_url=None, user_agent=None):
+        # "http", "https", "quic", "socks4","socks5"
+        capabilities = {
+            "browserName": "chrome",
+            "version": "81.0",
+            "enableVNC": True,
+            "enableVideo": False,
+        }
+        options = {"extensions": [], "args":[]}
+        if proxy_url:
+            logger.info(f'use proxy: {proxy_url}')
+            proxy = proxy_url_to_dict(proxy_url)
+            if 'user' in proxy:
+                options["extensions"] = self.get_chrome_proxy_extensions(proxy)
+            else:
+                options["args"].append(f"--proxy-server={proxy_url}")
+
+        if user_agent:
+            options["args"].append(f"--user-agent={user_agent}")
+
+
+
+
+
+        capabilities["goog:chromeOptions"] = options
+
+        return capabilities
+
+
+
+STATUS_CODE_LIST = {
+    'title':[r'404',r'500'],
+    'net': [
+        r'DNS_PROBE_FINISHED_NXDOMAIN',
+        r'ERR_NAME_NOT_RESOLVED',
+        r'ERR_CONNECTION_TIMED_OUT',
+        r'ERR_TIMED_OUT',
+        r'ERR_PROXY_CONNECTION_FAILED',
+        r'ERR_CERT_COMMON_NAME_INVALID'
+    ],
+    'captcha':[
+        r'META NAME=\"ROBOTS\"',
+        r'hcaptcha'
+        ]
+}
+
+
+
+class ChromeDriverBoot(object):
+    def __init__(self):
+        self.proxy_rotator = ProxyRotator()
+        self.agent_rotator = UserAgent()
+
+    def try_connect(self, start_url, use_proxy, use_agent):
+        param = {} #'198.27.76.4:5007' #
+        if use_proxy:
+            proxy_url = self.proxy_rotator.next()
+            # print('-------- use proxy', proxy_url)
+            param['proxy_url'] = proxy_url
+
+        if use_agent:
+            param['user_agent'] = self.agent_rotator.random
+
+
+        driver = webdriver.Remote(
+            command_executor = SELENOID_HUB,
+            desired_capabilities = OptionsMaker().chrome(**param))
+        driver.get(start_url)
+        return driver, param
+
+
+
+    def proc_captcha(self, driver):
+        for _ in range(360):
+            stat = get_status(driver)
+            if stat=='OK':
+                return driver
+            elif stat in STATUS_CODE_LIST.get('captcha'):
+                time.sleep(1)
+
+        raise Exception('Could not solve captcha')
+
+
+
+
+
+    def get(self, start_url, use_proxy=True, use_agent=False):
+
+        for i in range(UPLOAD_NEW_PROXIES_IF_LESS_THAN):
+            driver, param = self.try_connect(start_url, use_proxy, use_agent)
+            stat = get_status(driver)
+            logger.info(f'get {start_url} try:{i} status: {stat}')
+
+            if stat=='OK':
+                return driver
+
+            elif stat in ['ERR_CONNECTION_TIMED_OUT','ERR_TIMED_OUT', 'ERR_PROXY_CONNECTION_FAILED']:
+                if param.get('proxy_url'):
+                    self.proxy_rotator.delete( param.get('proxy_url'),
+                        f'Connection refused: proxy deleted, target {start_url}')
+                else:
+                    raise Exception('ERR_CONNECTION_TIMED_OUT')
+            elif stat in STATUS_CODE_LIST.get('captcha'):
+                logger.warnind('\n\n ============= Please solve the captcha =========\n\n')
+                return self.proc_captcha(driver)
+
+
+
+def get_status(driver):
+
+    try:
+        result = []
+        for stat_key in STATUS_CODE_LIST:
+            if stat_key=='title':
+                result.extend(re.findall(r'|'.join(STATUS_CODE_LIST.get(stat_key)),
+                                                                driver.title))
+            else:
+                result.extend(re.findall(r'|'.join(STATUS_CODE_LIST.get(stat_key)),
+                                                            driver.page_source))
+
+        return result[0] if result else 'OK'
+
+    except Exception as e:
+        logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
+        return 'ERR_CONNECTION_TIMED_OUT'

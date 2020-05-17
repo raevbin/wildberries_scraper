@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 import traceback
 from pprint import pprint
-from .db import Session, CatalogModel, ItemModel
-from .db import CostModel, StockModel, ReviewModel, OptionModel, QuantityModel
+from .db.wildsearch import Session, CatalogModel, ItemModel
+from .db.wildsearch import CostModel, StockModel, ReviewModel, OptionModel, QuantityModel
 from wildsearch_crawler.tools import DeepDict
 
 logger = logging.getLogger('main')
@@ -30,6 +30,7 @@ class WildsearchCrawlerPipeline(object):
             raise
 
         return item
+
 
     def proc_wb_cost(self, item):
 

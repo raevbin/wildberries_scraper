@@ -1,0 +1,30 @@
+alembic -c migrations/wildsearch/alembic.ini revision --autogenerate
+alembic -c migrations/wildsearch/alembic.ini upgrade head
+
+
+alembic -c migrations/ozon/alembic.ini revision --autogenerate
+alembic -c migrations/ozon/alembic.ini upgrade head
+
+=====================================================================
+error
+1205, 'Lock wait timeout exceeded; try restarting transaction'
+
+> SHOW ENGINE INNODB STATUS\G
+> show processlist;
+> kill <put_process_id_here>;
+
+решение
+> show variables like 'innodb_lock_wait_timeout';
++--------------------------+-------+
+| Variable_name            | Value |
++--------------------------+-------+
+| innodb_lock_wait_timeout | 50    |
++--------------------------+-------+
+
+[mysqld]
+innodb_lock_wait_timeout=120
+и перезапустите MySQL.
+Если вы не можете перезапустить MySQL в это время, запустите это:
+> SET GLOBAL innodb_lock_wait_timeout = 120;
+Вы также можете просто установить его на время вашей сессии
+> SET innodb_lock_wait_timeout = 120;
