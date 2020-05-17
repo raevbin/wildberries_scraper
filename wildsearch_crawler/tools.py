@@ -15,7 +15,11 @@ import traceback
 from fake_useragent import UserAgent
 
 from .db.wildsearch import Session, ProxyModel, StatProxyModel
-from wildsearch_crawler.settings import SCYLLA_URL, PROXY_POSTPONE_ON, SELENOID_HUB, UPLOAD_NEW_PROXIES_IF_LESS_THAN
+from wildsearch_crawler.settings import (SCYLLA_URL,
+                                        PROXY_POSTPONE_ON,
+                                        SELENOID_HUB,
+                                        UPLOAD_NEW_PROXIES_IF_LESS_THAN,
+                                        PROXY_FILTER)
 import logging
 
 
@@ -218,8 +222,12 @@ class ProxyRotator(object):
         self.db = Session()
         self.prefix = redis_prefix
         self.use_postponed = use_postponed
-        self.filtres = filtres
 
+
+        if filtres:
+            self.filtres = filtres.copy()
+        else:
+            self.filtres = PROXY_FILTER.copy()
 
         has_set = self.rdb.get(f'{self.prefix}_has_set')
         if (not has_set) or reload:
@@ -259,7 +267,7 @@ class ProxyRotator(object):
 
     def reload(self,use_postponed=False, **filtres):
         self.use_postponed = use_postponed
-        self.filtres = filtres
+        self.filtres = filtres.copy()
         self._load()
 
     def reset(self):
