@@ -92,8 +92,7 @@ logging.config.dictConfig({
                 'style': "{",
             },
             'detailed': {
-                'format':"{levelname} {asctime} {module} {funcName} \
-                                    {lineno} {process}/{thread} {message} " ,
+                'format':"{levelname} {asctime} {module} {funcName} {lineno} {process}/{thread} {message} " ,
                 'style': "{",
             },
             'message':{

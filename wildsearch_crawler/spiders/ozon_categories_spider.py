@@ -53,15 +53,12 @@ class WildberriesBrandsSpider(BaseSpider):
         try:
             catalog_el = self.get_catalog_root_element(response)
             for i, el_a in enumerate(catalog_el.css('a')):
-                if i > 1:
-                    pass
-                    break
                 root_data = self.get_root_data(el_a)
                 if root_data:
                     id = root_data.get('id')
                     if id:
-                        api_url = f'https://www.ozon.ru/webapi/cms-api.bx/menu/category/child/v1?categoryId={id}'
-                        logger.info(f'parse url {api_url}')
+                        api_url = 'https://www.ozon.ru/webapi/cms-api.bx/menu/category/child/v1?categoryId={0}'.format(id)
+                        logger.info('parse url {0}'.format(api_url))
                         yield scrapy.Request(api_url, self.parse_cat_element,
                                 cb_kwargs={'root_data': root_data})
         except Exception as e:
@@ -92,9 +89,8 @@ class WildberriesBrandsSpider(BaseSpider):
 
 
             for el in revision_list:
-                api_url = 'https://www.ozon.ru/api/composer-api.bx/page/json/v2?url='
-                api_url = f'{api_url}{el.get("url")}'
-                logger.info(f'parse url {api_url}')
+                api_url = 'https://www.ozon.ru/api/composer-api.bx/page/json/v2?url={0}'.format(el.get("url"))
+                logger.info('parse url {0}'.format(api_url))
                 yield scrapy.Request(api_url, self.parse_end_point,
                         cb_kwargs={'data': el})
 
