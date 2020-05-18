@@ -88,7 +88,7 @@ class WildberriesSpider(BaseSpider):
                 else:
                     # objects = get_elements(cat_id, CatalogModel)
                     objects = get_end_points_by_top_of_bush(cat_id)
-    
+
                 for i, el in enumerate(objects):
                     if i == self.limit:
                         return
@@ -203,7 +203,8 @@ class WildberriesSpider(BaseSpider):
             variants = data.get('variants')
 
             if not parent_item:
-                parent_item = data.get('main',{}).get('id')
+                if data:
+                    parent_item = data.get('main',{}).get('id')
             else:
                 data['parent_item'] = parent_item
 
@@ -212,6 +213,7 @@ class WildberriesSpider(BaseSpider):
                 if iter_variants and variants.get('variants'):
                     for el in variants.get('variants'):
                         if not el.get('active'):
+                            # logger.debug(f'>>>>> try variant {el.get("link")}')
                             url = self.convert_category_url_to_api(el.get('link'))
                             yield scrapy.Request(url, self.parse_good,
                                                 cb_kwargs={'iter_variants': False,
@@ -220,6 +222,7 @@ class WildberriesSpider(BaseSpider):
                 if iter_options and variants.get('options'):
                     for el in variants.get('options'):
                         if not el.get('active'):
+                            # logger.debug(f'>>>>> try option {el.get("link")}')
                             url = self.convert_category_url_to_api(el.get('link'))
                             yield scrapy.Request(url, self.parse_good,
                                                 cb_kwargs={'iter_variants': False,
@@ -229,43 +232,68 @@ class WildberriesSpider(BaseSpider):
             yield data
 
         except Exception as e:
-            print(traceback.format_exc(10))
+            logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
 
 
     def parse_category(self, response, category_url):
-        def find_goods_items(data):
-            """We search for following patterns in JSON keys:
+        try:
+            def find_goods_items(data):
+                """We search for following patterns in JSON keys:
 
-            searchResultsV2-226897-default-1
-            searchResultsV2-193750-categorySearchMegapagination-2
-            """
-            for idx, val in data['widgetStates'].items():
-                if 'searchResultsV2' in idx:
-                    return val
+                searchResultsV2-226897-default-1
+                searchResultsV2-193750-categorySearchMegapagination-2
+                """
+                for idx, val in data['widgetStates'].items():
+                    if 'searchResultsV2' in idx:
+                        return val
 
-        category_position = int(response.meta['current_position']) if 'current_position' in response.meta else 1
+            def get_next_page(data):
+                url = data.get('pageInfo', {}).get('url')
+                if url:
+                    url = url.split('?')[0]
+                    shared_str = data.get('shared')
+                    shared = json.loads(shared_str)
+                    current_page = shared.get('catalog',{}).get('currentPage',0)
+                    total_page = shared.get('catalog',{}).get('totalPages',0)
+                    # current_page = current_page if current_page > 0 else 1
+                    nex_page = current_page + 1
+                    if nex_page <= total_page:
+                        return  f'{url}?page={nex_page}'
 
-        category_data = json.loads(response.text)
+            category_position = int(response.meta['current_position']) if 'current_position' in response.meta else 1
 
-        items_raw = find_goods_items(category_data)
-        items = json.loads(items_raw)
-        items_count = len(items['items'])
+            category_data = json.loads(response.text)
 
-        current_position = category_position
+            items_raw = find_goods_items(category_data)
+            items = json.loads(items_raw)
+            items_count = len(items['items'])
 
-        for i, item in enumerate(items['items']):
-            url = self.convert_category_url_to_api(item['link'])
-            yield scrapy.Request(url, self.parse_good, cb_kwargs={'category_url':category_url})
+            current_position = category_position
 
-            current_position += 1
+            for i, item in enumerate(items['items']):
+                # logger.debug(f'>>>>> {i} {item["link"]}')
+                url = self.convert_category_url_to_api(item['link'])
+                yield scrapy.Request(url, self.parse_good, cb_kwargs={'category_url':category_url})
 
-        # follow pagination
-        if 'nextPage' in [*category_data]:
-            yield scrapy.Request(
-                self.convert_category_url_to_api(category_data['nextPage']),
-                self.parse_category, cb_kwargs={'category_url': category_url},
-                meta={
-                    # 'category_url': category_url,
-                    'category_position': category_position + items_count
-                }
-            )
+                current_position += 1
+
+            # follow pagination
+            next_url = get_next_page(category_data)
+            print('\n\n\n','next_url', next_url, '\n\n\n')
+            # if 'nextPage' in [*category_data]:
+            #     next_url = self.convert_category_url_to_api(category_data['nextPage'])
+            if next_url:
+
+                next_url = self.convert_category_url_to_api(next_url)
+                logger.debug(f'>>> try nextPage {next_url}')
+                yield scrapy.Request(
+                    next_url,
+                    self.parse_category, cb_kwargs={'category_url': category_url},
+                    meta={
+                        # 'category_url': category_url,
+                        'category_position': category_position + items_count
+                    }
+                )
+        except Exception as e:
+            logger.error(traceback.format_exc(ERROR_TRACE_LEVEL))
+            raise
