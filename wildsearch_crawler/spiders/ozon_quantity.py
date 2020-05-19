@@ -9,9 +9,13 @@ from pprint import pprint
 import traceback
 from selenium import webdriver
 from .base_spider import BaseSpider
-from wildsearch_crawler.db.ozon import CatalogModel, ItemModel, get_elements
+from wildsearch_crawler.db.ozon import CatalogModel, ItemModel, get_elements, get_items_from_bush
 from wildsearch_crawler.tools import ChromeDriverBoot
-from wildsearch_crawler.settings import ERROR_TRACE_LEVEL, SELENOID_STATUS_URL
+from wildsearch_crawler.settings import (ERROR_TRACE_LEVEL,
+                                        SELENOID_STATUS_URL,
+                                        USE_PROXY_FOR_OZ_QTY,
+                                        OZ_QTY_PORTION,
+                                        OZ_QTY_COUNT_PORTION)
 from wildsearch_crawler.ozon_pipelines import OzonQuantityPipeline
 
 logger = logging.getLogger('main')
@@ -19,13 +23,16 @@ logger = logging.getLogger('main')
 
 class OzonQuantitySpider(BaseSpider):
     name = 'oz_qty'
-    portion = 10
-    count_portion = 2
-    use_proxy = True
+    portion = OZ_QTY_PORTION
+    count_portion = OZ_QTY_COUNT_PORTION
+    use_proxy = USE_PROXY_FOR_OZ_QTY
     errors = []
 
     def start_requests(self):
         try:
+            # line = getattr(self, 'use_proxy', 'no')
+            # self.use_proxy = False if line == 'no' else True
+
             self.db = OzonQuantityPipeline()
             art_id_list = []
             objects = []
@@ -42,6 +49,13 @@ class OzonQuantitySpider(BaseSpider):
             item_art = getattr(self, 'item_art', None)
             if item_art:
                 objects = get_elements(item_art, ItemModel, ItemModel.art)
+
+
+            cat_id = getattr(self, 'cat_id', None)
+
+            if cat_id:
+                objects = get_items_from_bush(cat_id)
+
             art_id_list.extend([{el.art: el.id} for el in objects])
 
             yield scrapy.Request(SELENOID_STATUS_URL,
@@ -159,28 +173,41 @@ class OzonSeleniumParser(object):
         add_url = 'https://www.ozon.ru/webapi/composer-api.bx/_action/addToCart'
         js = self.js_templ.replace('URL', add_url)
         js = js.replace('DATA', self.get_param_add_baket())
-        self.driver.execute_script(js)
 
-        self.driver.get('https://www.ozon.ru/cart')
-        count_quantity = len(re.findall(r'maxQuantity', self.driver.page_source))
-        if not count_quantity:
-            if len(re.findall(r'Корзина пуста', self.driver.page_source)):
-                logger.error(f'ERROR, No items have been added to the cart. {self.art_id_dict}')
-                raise Exception(f'ERROR, No items have been added to the cart. {self.art_id_dict}')
+        for try_add_num in range(3):
+            self.driver.execute_script(js)
 
+            self.driver.get('https://www.ozon.ru/cart')
+            count_quantity = len(re.findall(r'maxQuantity', self.driver.page_source))
+
+
+            if count_quantity:
+                break
             else:
-                for _ in range(3):
-                    time.sleep(3)
-                    self.driver.refresh()
-                    count_quantity = len(re.findall(r'maxQuantity', self.driver.page_source))
-                    print('count_quantity',count_quantity)
-                    if count_quantity:
-                        break
+                logger.error(f'No items have been added to the cart.')
+                if not len(re.findall(r'Корзина пуста', self.driver.page_source)):
+                    for _ in range(3):
+                        logger.error(f'Quantity not found. Attempt to update')
+                        time.sleep(3)
+                        self.driver.refresh()
+                        count_quantity = len(re.findall(r'maxQuantity', self.driver.page_source))
+                        if count_quantity:
+                            break
+
+
+            self.driver.get('https://www.ozon.ru/')
+            time.sleep(3)
+            logger.info(f'Retrying add to cart {self.art_id_dict}')
+
 
         out_data_list = []
         if count_quantity:
             data_list = self.get_data()
             out_data_list = self.proc_data(data_list)
+
+        else:
+            # logger.error(f'ERROR, No items have been added to the cart. {self.art_id_dict}')
+            raise Exception(f'ERROR, No items have been added to the cart')
 
         for el in self.art_id_dict:
             out_data_list.append({

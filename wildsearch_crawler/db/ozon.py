@@ -161,6 +161,29 @@ def get_end_points_by_top_of_bush(param):
 
 
 
+def get_items_from_bush(param):
+    ids_list = get_id_list(param)
+    session = Session()
+    objects = session.query(CatalogModel).filter(CatalogModel.id.in_(ids_list)).all()
+    items_objects = []
+
+    def search_items(obj_list):
+        for el in obj_list:
+            items = session.query(ItemModel).join(ItemModel.categories, aliased=True).\
+                                            filter(CatalogModel.id.in_([el.id])).all()
+            items_objects.extend(items)
+            if not el.end_point:
+                next_objects = session.query(CatalogModel).filter_by(upper_ozon_id=el.ozon_id).all()
+                if next_objects:
+                    search_items(next_objects)
+
+    search_items(objects)
+
+    return list(set(items_objects))
+
+
+
+
 def get_elements(param, model, element=None, relation=None):
     element = model.id if not element else element
     ''' param: <str>

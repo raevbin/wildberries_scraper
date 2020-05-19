@@ -14,6 +14,7 @@ services:
     volumes:
      - ./:/start.sh
      - ./:/data
+     - /dev/shm:/dev/shm
 
   # splash:
   #   image: scrapinghub/splash:master
@@ -54,6 +55,7 @@ services:
     volumes:
       - "./selenoid:/etc/selenoid/"
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - /dev/shm:/dev/shm
 
   selenoid-ui:
     image: "aerokube/selenoid-ui"

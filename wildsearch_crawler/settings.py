@@ -53,7 +53,22 @@ UPLOAD_NEW_PROXIES_IF_LESS_THAN = 3
 PROXY_SOURSE_DEFAULT = 'csv'
 PROXY_MODE_DEFAULT = 'reload'
 
+USE_PROXY_FOR_OZ_QTY = True
 
+# ====================== OZ_QTY =====================
+
+OZ_QTY_PORTION = 10
+OZ_QTY_COUNT_PORTION = 2
+
+CHROME_ARGS = [
+    'start-maximized',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--disable-browser-side-navigation',
+    '--disable-infobars',
+    # '--no-sandbox',
+    'enable-automation'
+]
 
 # ====================== DELAY ======================
 # DOWNLOAD_DELAY = 2
@@ -81,7 +96,7 @@ logging.getLogger('scrapy').propagate = False
 LOG_ENABLED = False
 
 
-set_level_logging(logging.WARNING)
+set_level_logging(logging.DEBUG)
 
 
 logging.config.dictConfig({

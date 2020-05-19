@@ -78,16 +78,16 @@ class WildberriesSpider(BaseSpider):
                 return
 
 
-            cat_id = getattr(self, 'cat_id', None) # <number>, <range>, all, endpoints
+            cat_id = getattr(self, 'cat_id', None) 
 
             if cat_id:
-                objects = []
-                if cat_id == 'endpoints':
-                    objects = Session().query(CatalogModel
-                                    ).filter_by(end_point=True).all()
-                else:
-                    # objects = get_elements(cat_id, CatalogModel)
-                    objects = get_end_points_by_top_of_bush(cat_id)
+                objects = get_elements(cat_id, CatalogModel)
+                # if cat_id == 'endpoints':
+                #     objects = Session().query(CatalogModel
+                #                     ).filter_by(end_point=True).all()
+                # else:
+                #     objects = get_elements(cat_id, CatalogModel)
+                    # objects = get_end_points_by_top_of_bush(cat_id)
 
                 for i, el in enumerate(objects):
                     if i == self.limit:
@@ -279,9 +279,8 @@ class WildberriesSpider(BaseSpider):
 
             # follow pagination
             next_url = get_next_page(category_data)
-            print('\n\n\n','next_url', next_url, '\n\n\n')
-            # if 'nextPage' in [*category_data]:
-            #     next_url = self.convert_category_url_to_api(category_data['nextPage'])
+            # print('\n\n\n','next_url', next_url, '\n\n\n')
+
             if next_url:
 
                 next_url = self.convert_category_url_to_api(next_url)

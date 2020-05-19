@@ -58,6 +58,7 @@ class OzonGoodPipeline(object):
 
     def process_item(self, item, spider):
         try:
+            # pprint(item)
             current_date = datetime.now()
             overwrite = item.get('overwrite')
             item = DeepDict(item)
@@ -85,8 +86,9 @@ class OzonGoodPipeline(object):
                 product.brand_id = item.get('main.brandId')
                 product.storehouse_id = item.get('main.storehouseId')
 
-
-            category = self.db.query(CatalogModel).filter_by(url=item.get('category_url')).first()
+            cat_ozon_id = item.get('main.categoryId')
+            # category = self.db.query(CatalogModel).filter_by(url=item.get('category_url')).first()
+            category = self.db.query(CatalogModel).filter_by(ozon_id=cat_ozon_id).first()
             if category:
                 product.categories.append(category)
 

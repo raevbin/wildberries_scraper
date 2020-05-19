@@ -19,7 +19,8 @@ from wildsearch_crawler.settings import (SCYLLA_URL,
                                         PROXY_POSTPONE_ON,
                                         SELENOID_HUB,
                                         UPLOAD_NEW_PROXIES_IF_LESS_THAN,
-                                        PROXY_FILTER)
+                                        PROXY_FILTER,
+                                        CHROME_ARGS)
 import logging
 
 
@@ -418,7 +419,7 @@ class OptionsMaker(object):
             "enableVNC": True,
             "enableVideo": False,
         }
-        options = {"extensions": [], "args":[]}
+        options = {"extensions": [], "args":CHROME_ARGS.copy()}
         if proxy_url:
             logger.info(f'use proxy: {proxy_url}')
             proxy = proxy_url_to_dict(proxy_url)
